@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-cd /home/test/Documentos/Proyectos/BiblioTK/bibliotkv1
+cd /home/test/libroTK/bibliotkv1
 
 echo "=========================================="
 echo " BIBLIOTK v2.5 - TESTING COMPLETO PDF"
@@ -125,5 +125,3 @@ echo " Tambien: http://52.67.100.34:3000/"
 echo " Users: user1@test.com / 12345678"
 echo " Admin: admin@bibliotk.cl / 123456"
 echo "=========================================="
-pkill -f puma; bin/rails server -b 0.0.0.0 -p 3000 -d
-echo "Servidor reiniciado en background"

@@ -1,48 +1,135 @@
-<div class="row g-5">
-  <div class="col-md-4">
-    <div style="border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;"><img src="https://picsum.photos/seed/book<%= @book.id %>/600/900" class="img-fluid w-100"></div>
-    <div class="mt-3 p-3 bg-white border rounded-3"><div class="small text-uppercase text-muted mb-2" style="font-size:0.7rem;">Métricas</div><div class="small d-flex justify-content-between"><span>Reviews DB</span><b><%= @reviews_total_count %></b></div><div class="small d-flex justify-content-between"><span>Válidas</span><b><%= @book.valid_reviews_count %></b></div></div>
-  </div>
-  <div class="col-md-8">
-    <a href="/books?page=<%= params[:page] || 1 %>" class="small text-muted text-decoration-none">← Volver</a>
-    <h2 class="mt-2 fw-bold" style="font-family:'Merriweather',serif;"><%= @book.title %></h2>
-    <div class="text-muted mb-3"><%= @book.author %></div>
+<div class="container py-3">
+  <a href="/books" class="btn btn-sm btn-outline-secondary mb-3">← Volver a libros</a>
+  <div class="row g-4">
+    <div class="col-12 col-md-4">
+      <img src="https://picsum.photos/seed/book-<%= @book.id %>/600/800" class="img-fluid rounded-4 shadow-sm w-100" style="object-fit:cover; max-height:500px;" onerror="this.src='https://picsum.photos/600/800?random=<%= @book.id %>'">
+      <div class="mt-3 p-3 bg-white border rounded-4 shadow-sm">
+        <h5 class="fw-bold mb-1"><%= @book.title %></h5>
+        <p class="text-muted small mb-2"><%= @book.author %></p>
+        <% avg = @book.average_rating %>
+        <% if avg.nil? %>
+          <span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d;">Reseñas Insuficientes (<%= @book.valid_reviews_count %>)</span>
+        <% else %>
+          <div class="d-flex align-items-center gap-2">
+            <span style="color:#f59e0b; font-size:1.3rem;"><%= "★" * avg.floor %><span style="color:#e5e7eb;"><%= "★" * (5 - avg.floor) %></span></span>
+            <b><%= avg %></b>
+          </div>
+          <small class="text-muted"><%= @book.valid_reviews_count %> reseñas válidas • <%= @book.valid_total_stars %> pts totales</small>
+        <% end %>
+      </div>
+    </div>
 
-    <% if @book.average_rating %>
-      <div class="bg-white border rounded-3 p-4 mb-4"><div class="d-flex gap-3 align-items-center"><div class="display-6 fw-bold"><%= @book.average_rating %></div><div style="color:#b45309;font-size:1.4rem;"><% r=@book.average_rating.round %><% (1..5).each do |i| %><% if i<=r %>★<% else %><span style="color:#e2e8f0;">★</span><% end %><% end %></div><span class="badge bg-light text-dark border"><%= @book.valid_reviews_count %> válidas</span></div></div>
-    <% end %>
-
-    <% if current_user %>
-      <% if @my_review %>
-        <div class="border rounded-3 p-4 mb-4" style="background:#fffbeb;border-color:#fde68a!important;"><div class="small fw-bold">Tu evaluación: <%= @my_review.stars %>★</div><%= form_with model: [@book, @my_review], method: :patch, local: true do |f| %><input type="hidden" name="review[stars]" id="edit-stars" value="<%= @my_review.stars %>"><div id="edit-rating" data-initial="<%= @my_review.stars %>" style="font-size:2rem;cursor:pointer;"><% (1..5).each do |i| %><span data-v="<%= i %>" style="color:#e2e8f0;">★</span><% end %></div><div class="d-flex gap-2 mt-2"><%= f.text_field :content, class: "form-control", value: @my_review.content %><%= f.submit "Actualizar", class: "btn btn-dark" %></div><% end %></div>
+    <div class="col-12 col-md-8">
+      <!-- FORM RANKING -->
+      <% if current_user %>
+        <% my_review = @book.reviews.find_by(user_id: current_user.id) %>
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:16px;">
+          <div class="card-body p-4">
+            <% if my_review %>
+              <h6 class="fw-bold">Tu reseña</h6>
+              <%= form_with model: [@book, my_review], method: :patch, local: true do |f| %>
+                <div class="mb-2">
+                  <label class="small text-muted">Estrellas</label>
+                  <div class="d-flex gap-1 fs-4" id="stars-edit">
+                    <% (1..5).each do |i| %>
+                      <span class="star-edit" data-value="<%= i %>" style="cursor:pointer; color:<%= i <= my_review.stars ? '#f59e0b' : '#e5e7eb' %>;">★</span>
+                    <% end %>
+                  </div>
+                  <%= f.hidden_field :stars, id: "stars-input-edit", value: my_review.stars %>
+                </div>
+                <div class="mb-2">
+                  <%= f.text_area :content, class: "form-control", rows: 3, maxlength: 1000, placeholder: "Edita tu comentario (max 1000)" %>
+                </div>
+                <div class="d-flex gap-2">
+                  <%= f.submit "Actualizar reseña", class: "btn btn-dark btn-sm" %>
+                  <%= button_to "Eliminar", book_review_path(@book, my_review), method: :delete, class: "btn btn-outline-danger btn-sm", form: { data: { turbo_confirm: "¿Eliminar tu reseña?" } } %>
+                </div>
+              <% end %>
+            <% else %>
+              <h6 class="fw-bold">Rankear este libro</h6>
+              <%= form_with model: [@book, @review || Review.new], local: true do |f| %>
+                <div class="mb-2">
+                  <label class="small text-muted">Haz clic en las estrellas</label>
+                  <div class="d-flex gap-1 fs-3" id="stars-new">
+                    <% (1..5).each do |i| %>
+                      <span class="star-new" data-value="<%= i %>" style="cursor:pointer; color:#e5e7eb;">★</span>
+                    <% end %>
+                  </div>
+                  <%= f.hidden_field :stars, id: "stars-input-new", required: true %>
+                </div>
+                <div class="mb-2">
+                  <%= f.text_area :content, class: "form-control", rows: 3, maxlength: 1000, placeholder: "Agrega un comentario (opcional, max 1000)" %>
+                </div>
+                <%= f.submit "Enviar reseña", class: "btn btn-dark" %>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
       <% else %>
-        <div class="bg-white border rounded-3 p-4 mb-4"><div class="small fw-semibold mb-2">Nueva evaluación — clic en estrella</div><%= form_with model: [@book, Review.new], local: true do |f| %><input type="hidden" name="review[stars]" id="new-stars" value="0" required><div id="new-rating" data-initial="0" style="font-size:2.4rem;cursor:pointer;"><% (1..5).each do |i| %><span data-v="<%= i %>" style="color:#e2e8f0;">★</span><% end %></div><div id="help" class="small text-muted mb-2">Selecciona estrellas</div><%= f.text_area :content, class: "form-control mb-2", rows: 3 %><%= f.submit "Publicar", class: "btn btn-dark w-100", id: "btn-pub", disabled: true %><% end %></div>
+        <div class="alert alert-light border" style="border-radius:12px;">Debes <a href="/login">iniciar sesión</a> para rankear.</div>
       <% end %>
-    <% end %>
 
-    <div class="d-flex justify-content-between align-items-center"><h6>Reseñas (<%= @reviews_total_count %>) — Página <%= @reviews_page %> de <%= @reviews_total_pages %></h6></div>
-    <% @reviews.each do |r| %>
-      <div class="bg-white border rounded-3 p-3 mb-2 d-flex justify-content-between"><div><span style="color:#b45309;"><% r.stars.times do %>★<% end %></span><span style="color:#e2e8f0;"><% (5-r.stars).times do %>★<% end %></span><b class="small ms-2"><%= r.user&.name %> #<%= r.user_id %></b><% if r.user&.banned? %><span class="badge" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;font-size:0.65rem;">BANEADO</span><% end %><div class="small text-muted"><%= r.content.presence || "(sin contenido)" %></div></div><div class="text-end"><% if current_user&.admin? && r.user_id!= current_user.id %><% if r.user&.banned? %><%= button_to "Reactivar", unban_user_path(r.user), method: :post, class: "btn btn-sm", style: "background:white;color:#166534;border:1px solid #bbf7d0;border-radius:8px;font-size:0.75rem;" %><% else %><%= button_to "🚫 Banear", ban_user_path(r.user), method: :post, class: "btn btn-sm", style: "background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:8px;font-size:0.75rem;" %><% end %><% end %><div class="small text-muted" style="font-size:0.7rem;"><%= r.created_at.strftime("%d %b") %></div></div></div>
-    <% end %>
+      <!-- LISTADO RESEÑAS -->
+      <h6 class="fw-bold mb-3">Reseñas (<%= @reviews_total %>)</h6>
+      <% @reviews.each do |r| %>
+        <div class="card mb-2 border-0 shadow-sm" style="border-radius:12px;">
+          <div class="card-body d-flex justify-content-between align-items-start">
+            <div>
+              <div class="d-flex align-items-center gap-2">
+                <b style="font-size:0.9rem;"><%= r.user.name %></b>
+                <span style="color:#f59e0b;"><%= "★" * r.stars %><span style="color:#e5e7eb;"><%= "★" * (5 - r.stars) %></span></span>
+              </div>
+              <div class="small text-muted mt-1" style="word-break:break-word;"><%= r.content %></div>
+              <small class="text-muted" style="font-size:0.7rem;"><%= r.created_at.strftime("%d/%m %H:%M") %></small>
+            </div>
+            <% if current_user&.admin? && r.user_id != current_user.id %>
+              <div class="ms-2">
+                <% if r.user.banned? %>
+                  <%= button_to "Reactivar", unban_user_path(r.user), method: :post, class: "btn btn-sm btn-outline-success", style: "font-size:0.7rem;" %>
+                <% else %>
+                  <%= button_to "🚫 Banear", ban_user_path(r.user), method: :post, class: "btn btn-sm btn-outline-danger", style: "font-size:0.7rem;", form: { data: { turbo_confirm: "¿Banear a #{r.user.email}? Recalculará O(1)" } } %>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
 
-    <%= corporate_paginator(@reviews_page, @reviews_total_pages, @reviews_total_count, @reviews_per_page, param_name: :reviews_page, path: book_path(@book)) %>
+      <% if @reviews_total_pages > 1 %>
+        <nav class="mt-3"><ul class="pagination justify-content-center flex-wrap">
+          <% (1..@reviews_total_pages).each do |p| %>
+            <li class="page-item <%= 'active' if p == @reviews_page %>"><%= link_to p, book_path(@book, reviews_page: p), class: "page-link" %></li>
+          <% end %>
+        </ul></nav>
+      <% end %>
+    </div>
   </div>
 </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function(){
-  function bind(cid, iid){
-    var cont=document.getElementById(cid); if(!cont) return;
-    var input=document.getElementById(iid);
-    var stars=cont.querySelectorAll("span");
-    function paint(v){ stars.forEach(function(s){ var ov=parseInt(s.getAttribute("data-v")); s.style.color=ov<=v?"#b45309":"#e2e8f0"; }); }
-    paint(parseInt(cont.getAttribute("data-initial")||"0"));
-    stars.forEach(function(s){
-      s.addEventListener("mouseenter", function(){ var v=parseInt(this.getAttribute("data-v")); stars.forEach(function(o){ o.style.color=parseInt(o.getAttribute("data-v"))<=v?"#b45309":"#e2e8f0"; }); });
-      s.addEventListener("mouseleave", function(){ paint(parseInt(input.value||"0")); });
-      s.addEventListener("click", function(){ var v=parseInt(this.getAttribute("data-v")); input.value=v; cont.setAttribute("data-initial",v); paint(v); var b=document.getElementById("btn-pub"); if(b) b.disabled=false; });
+  function setupStars(containerId, inputId, itemClass){
+    const container = document.getElementById(containerId);
+    if(!container) return;
+    const input = document.getElementById(inputId);
+    const stars = container.querySelectorAll("."+itemClass);
+    stars.forEach(s=>{
+      s.addEventListener("click", function(){
+        const v = this.dataset.value;
+        input.value = v;
+        stars.forEach(st=>{ st.style.color = parseInt(st.dataset.value) <= v ? '#f59e0b' : '#e5e7eb'; });
+      });
+      s.addEventListener("mouseenter", function(){
+        const v = this.dataset.value;
+        stars.forEach(st=>{ st.style.color = parseInt(st.dataset.value) <= v ? '#f59e0b' : '#e5e7eb'; });
+      });
+    });
+    container.addEventListener("mouseleave", function(){
+      const v = input.value || 0;
+      stars.forEach(st=>{ st.style.color = parseInt(st.dataset.value) <= v ? '#f59e0b' : '#e5e7eb'; });
     });
   }
-  bind("new-rating","new-stars"); bind("edit-rating","edit-stars");
+  setupStars("stars-new","stars-input-new","star-new");
+  setupStars("stars-edit","stars-input-edit","star-edit");
 });
 </script>

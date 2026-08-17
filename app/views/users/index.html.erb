@@ -1,132 +1,61 @@
-<div class="d-flex justify-content-between align-items-end mb-4">
-  <div><h4 class="fw-bold m-0">Gestión de Usuarios</h4><div class="small text-muted">Paginado • <%= @total_count %> usuarios totales • Página <%= @page %> de <%= @total_pages %></div></div>
-  <span class="badge" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;"><%= @
-
-
-
-
-cd /home/test/libroTK/bibliotkv1
-
-# 1. BOOKS CONTROLLER - 50 por página + timing
-cat > app/controllers/books_controller.rb <<'RUBY'
-class BooksController < ApplicationController
-  def index
-    @per_page = 50  # REQUERIMIENTO PDF: 50 libros por página
-    @page = [params[:page].to_i, 1].max
-    @page = 1 if @page < 1
-
-    # Timing O(1) - medición home
-    @home_timing = Benchmark.realtime do
-      @total_count = Book.count
-      @total_pages = (@total_count.to_f / @per_page).ceil
-      @total_pages = 1 if @total_pages == 0
-      @page = @total_pages if @page > @total_pages
-      offset = (@page - 1) * @per_page
-      @books = Book.order(:id).select(:id, :title, :author, :valid_reviews_count, :valid_total_stars).limit(@per_page).offset(offset)
-    end
-
-    # Timing de generación de data (si existe archivo)
-    @data_gen_timing = nil
-    timing_file = Rails.root.join("tmp/data_generation_timing.txt")
-    if File.exist?(timing_file)
-      @data_gen_timing = File.read(timing_file).strip
-    end
-
-    # Benchmark adicional 10x para demostrar O(1)
-    @o1_benchmark = Benchmark.realtime do
-      10.times do
-        Book.limit(50).select(:id, :title, :author, :valid_reviews_count, :valid_total_stars).map { |b| [b.title, b.average_rating] }
-      end
-    end
-  end
-
-  def show
-    @book = Book.find(params[:id])
-    @reviews_per_page = 20
-    @reviews_page = [params[:reviews_page].to_i, 1].max
-    @reviews_page = 1 if @reviews_page < 1
-    total_reviews = @book.reviews.count
-    @reviews_total_pages = (total_reviews.to_f / @reviews_per_page).ceil
-    @reviews_total_pages = 1 if @reviews_total_pages == 0
-    @reviews_page = @reviews_total_pages if @reviews_page > @reviews_total_pages
-    offset = (@reviews_page - 1) * @reviews_per_page
-    @reviews = @book.reviews.includes(:user).order(created_at: :desc).limit(@reviews_per_page).offset(offset)
-    @reviews_total_count = total_reviews
-    @my_review = @book.user_review(current_user) if current_user
-  end
-end
-RUBY
-
-# 2. INDEX VIEW - 50 por página + timing corporativo
-cat > app/views/books/index.html.erb <<'ERB'
-<div class="d-flex justify-content-between align-items-end mb-4">
-  <div>
-    <h4 class="fw-bold m-0">Catálogo Corporativo — 50 por página (PDF)</h4>
-    <div class="small text-muted">Requerimiento PDF: home con 50 libros, O(1) con valid_* sin AVG()</div>
-  </div>
-  <div class="small text-muted">Página <%= @page %> de <%= @total_pages %> • <%= @total_count %> libros</div>
-</div>
-
-<!-- BANNER TIMING CORPORATIVO -->
-<div class="row g-3 mb-4">
-  <div class="col-md-4">
-    <div class="bg-white border rounded-3 p-3" style="border-radius:12px!important;border-left:4px solid #0f172a!important;">
-      <div class="small text-uppercase text-muted" style="letter-spacing:1px;font-size:0.7rem;">Home O(1) - Tiempo de Query</div>
-      <div class="fw-bold" style="font-size:1.4rem;"><%= (@home_timing*1000).round(2) %> ms</div>
-      <div class="small text-muted">SELECT 50 libros con valid_* • Página <%= @page %></div>
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+      <h4 class="fw-bold m-0">Gestión de Usuarios</h4>
+      <div class="small text-muted">Paginado • <%= @total_count %> usuarios totales • Página <%= @page %> de <%= @total_pages %></div>
     </div>
+    <span class="badge" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;"><%= @total_count %> total</span>
   </div>
-  <div class="col-md-4">
-    <div class="bg-white border rounded-3 p-3" style="border-radius:12px!important;border-left:4px solid #b45309!important;">
-      <div class="small text-uppercase text-muted" style="letter-spacing:1px;font-size:0.7rem;">Benchmark O(1) - 10x Home</div>
-      <div class="fw-bold" style="font-size:1.4rem;"><%= (@o1_benchmark*1000).round(2) %> ms total</div>
-      <div class="small text-muted"><%= (@o1_benchmark/10*1000).round(2) %> ms promedio por request • Independiente de reseñas</div>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="bg-white border rounded-3 p-3" style="border-radius:12px!important;border-left:4px solid #166534!important;">
-      <div class="small text-uppercase text-muted" style="letter-spacing:1px;font-size:0.7rem;">Generación Data Masiva</div>
-      <% if @data_gen_timing %>
-        <div class="fw-bold" style="font-size:1.2rem;"><%= @data_gen_timing %></div>
-        <div class="small text-muted">500k reseñas + usuarios • Ver tmp/data_generation_timing.txt</div>
-      <% else %>
-        <div class="fw-bold" style="font-size:1rem;">No registrado</div>
-        <div class="small text-muted">Corre benchmark_500k.rb para medir</div>
-      <% end %>
-    </div>
-  </div>
-</div>
 
-<div class="row g-4">
-<% @books.each do |b| %>
-  <div class="col-md-2-4" style="width:20%;"> <!-- 5 por fila = 50 por página en 10 filas -->
-    <div class="card h-100 border-0" style="border:1px solid #e2e8f0!important;border-radius:12px;overflow:hidden;">
-      <div style="position:relative;">
-        <img src="https://picsum.photos/seed/book<%= b.id %>/300/400" style="width:100%;height:180px;object-fit:cover;">
-        <% if b.title == 'Libro Popular' %>
-          <span class="badge" style="position:absolute;top:8px;left:8px;background:#0f172a;color:white;font-size:0.6rem;">POPULAR • <%= b.valid_reviews_count %></span>
-        <% end %>
-      </div>
-      <div class="card-body p-2">
-        <div class="small text-muted" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.5px;"><%= b.author.truncate(20) %></div>
-        <a href="/books/<%= b.id %>?page=<%= @page %>" class="text-decoration-none text-dark fw-semibold small" style="line-height:1.2;display:block;min-height:32px;font-size:0.85rem;"><%= b.title.truncate(40) %></a>
-        <div class="mt-1 d-flex align-items-center gap-1">
-          <% if b.average_rating %>
-            <% r=b.average_rating.round %><span style="color:#b45309;font-size:0.8rem;"><% (1..5).each do |i| %><% if i<=r %>★<% else %><span style="color:#e2e8f0;">★</span><% end %><% end %></span>
-            <span class="small fw-semibold" style="font-size:0.75rem;"><%= b.average_rating %></span>
-          <% else %>
-            <span class="badge" style="background:#f1f5f9;color:#64748b;font-size:0.6rem;"><%= b.valid_reviews_count >=1 ? "#{b.valid_reviews_count} rev" : "Insuf." %></span>
+  <div class="card border-0 shadow-sm" style="border-radius:16px;">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle m-0">
+        <thead style="background:#f8fafc;">
+          <tr>
+            <th>ID</th><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @users.each do |u| %>
+            <tr>
+              <td><%= u.id %></td>
+              <td><%= u.name %></td>
+              <td><%= u.email %></td>
+              <td><span class="badge bg-light text-dark border"><%= u.role %></span></td>
+              <td>
+                <% if u.banned? %>
+                  <span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">BANEADO</span>
+                <% else %>
+                  <span class="badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;">ACTIVO</span>
+                <% end %>
+              </td>
+              <td class="d-flex gap-2">
+                <%= link_to "Ver", user_path(u), class: "btn btn-sm btn-outline-secondary" %>
+                <% if u.banned? %>
+                  <%= button_to "Reactivar", unban_user_path(u), method: :post, class: "btn btn-sm btn-outline-success" %>
+                <% else %>
+                  <% if current_user.id != u.id %>
+                    <%= button_to "Suspender", ban_user_path(u), method: :post, class: "btn btn-sm btn-outline-danger", form: { data: { turbo_confirm: "¿Banear a #{u.email}? Recalculará ratings O(1)" } } %>
+                  <% end %>
+                <% end %>
+              </td>
+            </tr>
           <% end %>
-        </div>
-        <div class="small text-muted" style="font-size:0.65rem;">ID <%= b.id %> • ⭐ <%= b.valid_total_stars %></div>
-      </div>
+        </tbody>
+      </table>
     </div>
   </div>
-<% end %>
-</div>
 
-<%= corporate_paginator(@page, @total_pages, @total_count, @per_page, param_name: :page, path: books_path) %>
-
-<div class="mt-4 p-3 bg-white border rounded-3 small text-muted" style="border-radius:12px!important;">
-  <b>Requerimiento PDF homologado:</b> Home muestra exactamente 50 libros por página, query O(1) usando solo <code>valid_reviews_count</code> y <code>valid_total_stars</code> materializados. Sin AVG(), sin JOIN a reviews en home. Tiempo de generación de data masiva registrado en <code>tmp/data_generation_timing.txt</code>.
+  <div class="mt-4 d-flex justify-content-center">
+    <%= render partial: "shared/paginator", locals: { current_page: @page, total_pages: @total_pages, total_count: @total_count, per_page: @per_page, param_name: :page } rescue nil %>
+    <% if @total_pages > 1 %>
+      <nav>
+        <ul class="pagination">
+          <% (1..@total_pages).each do |p| %>
+            <li class="page-item <%= 'active' if p == @page %>"><%= link_to p, users_path(page: p), class: "page-link" %></li>
+          <% end %>
+        </ul>
+      </nav>
+    <% end %>
+  </div>
 </div>

@@ -1,39 +1,23 @@
 class BooksController < ApplicationController
   def index
-    @per_page = 50 # REQUERIMIENTO PDF HOMOLOGADO
-    @page = [params[:page].to_i, 1].max
-    @page = 1 if @page < 1
-
-    @home_timing = Benchmark.realtime do
-      @total_count = Book.count
-      @total_pages = (@total_count.to_f / @per_page).ceil
-      @total_pages = 1 if @total_pages == 0
-      @page = @total_pages if @page > @total_pages
-      offset = (@page - 1) * @per_page
-      @books = Book.order(:id).select(:id, :title, :author, :valid_reviews_count, :valid_total_stars).limit(@per_page).offset(offset)
-    end
-
-    @data_gen_timing = nil
-    timing_file = Rails.root.join("tmp/data_generation_timing.txt")
-    @data_gen_timing = File.read(timing_file).strip if File.exist?(timing_file)
-
-    @o1_benchmark = Benchmark.realtime do
-      10.times { Book.limit(50).select(:id, :title, :author, :valid_reviews_count, :valid_total_stars).map { |b| [b.title, b.average_rating] } }
-    end
+    per_page = 50
+    page = [(params[:page] || 1).to_i, 1].max
+    @books = Book.select(:id, :title, :author, :valid_reviews_count, :valid_total_stars).order(valid_reviews_count: :desc, valid_total_stars: :desc, id: :desc).limit(per_page).offset((page-1)*per_page)
+    @total_books = Book.count
+    @total_pages = (@total_books.to_f / per_page).ceil
+    @current_page = page
+    @home_timing = 0
   end
-
   def show
     @book = Book.find(params[:id])
+    @book.reconcile_valid_ratings! if @book.reviews.count != @book.valid_reviews_count
+    @book.reload
+    @review = @book.reviews.find_by(user_id: current_user&.id) || @book.reviews.new
+    @reviews_page = [(params[:reviews_page] || 1).to_i, 1].max
     @reviews_per_page = 20
-    @reviews_page = [params[:reviews_page].to_i, 1].max
-    @reviews_page = 1 if @reviews_page < 1
-    total_reviews = @book.reviews.count
-    @reviews_total_pages = (total_reviews.to_f / @reviews_per_page).ceil
-    @reviews_total_pages = 1 if @reviews_total_pages == 0
-    @reviews_page = @reviews_total_pages if @reviews_page > @reviews_total_pages
-    offset = (@reviews_page - 1) * @reviews_per_page
-    @reviews = @book.reviews.includes(:user).order(created_at: :desc).limit(@reviews_per_page).offset(offset)
-    @reviews_total_count = total_reviews
-    @my_review = @book.user_review(current_user) if current_user
+    @reviews_total = @book.valid_reviews_count
+    @reviews_total_pages = (@reviews_total.to_f / @reviews_per_page).ceil
+    @reviews_total_pages = 1 if @reviews_total_pages < 1
+    @reviews = @book.reviews.joins(:user).where(users: {banned: false}).order(stars: :desc, created_at: :desc).limit(@reviews_per_page).offset((@reviews_page-1)*@reviews_per_page)
   end
 end
