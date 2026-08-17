@@ -1,0 +1,1 @@
+class UpdateBookRatingsOnUserBanJob < ApplicationJob; queue_as :default; def perform(uid); u=User.find_by(id:uid); return unless u; u.reviews.distinct.pluck(:book_id).each{|bid| ReconcileBookRatingJob.perform_later(bid); DetectBookFraudJob.set(wait:30.seconds).perform_later(bid) if AiAnalyzer.active?}; end; end

@@ -1,0 +1,9 @@
+require "json"; require "openai"
+class AiAnalyzer
+  MODEL = ENV.fetch("OPENAI_MODEL", "gpt-4o-mini")
+  def self.active?; ENV["OPENAI_API_KEY"].present?; end
+  def initialize; api_key=ENV["OPENAI_API_KEY"]; raise "OPENAI_API_KEY no configurada" if api_key.blank?; @client=OpenAI::Client.new(access_token: api_key, request_timeout: 15); end
+  def analizar_resena(texto); return {} if texto.blank?; safe=texto.to_s.gsub(/<\/?review>/i,"[review]").truncate(2000); prompt="Solo JSON {\"sentimiento\":\"Positivo|Negativo|Neutral\",\"resumen\":\"max 8 palabras\",\"confianza\":0.0} <review>#{safe}</review>"; data=chat_json(prompt,"Solo JSON"); return {} unless %w[Positivo Negativo Neutral].include?(data["sentimiento"].to_s); {"sentimiento"=>data["sentimiento"],"resumen"=>data["resumen"].to_s.truncate(255),"confianza"=>data["confianza"].to_f.clamp(0.0,1.0)}; rescue StandardError=>e; Rails.logger.error("[AiAnalyzer] #{e.class}: #{e.message}"); {}; end
+  def detectar_fraude(textos,promedio); return {} if textos.size <=10; reviews=textos.first(30).map{|t| "<review>#{t.to_s.gsub(/<\/?review>/i,"[review]").truncate(500)}</review>"}.join("\n"); prompt="Solo JSON {\"fraude\":false,\"confianza\":0.0,\"razon\":\"breve\"} Promedio:#{promedio.round(2)} <reviews>#{reviews}</reviews>"; data=chat_json(prompt,"Solo JSON fraude"); {"fraude"=>ActiveModel::Type::Boolean.new.cast(data["fraude"]),"confianza"=>data["confianza"].to_f.clamp(0.0,1.0),"razon"=>data["razon"].to_s.truncate(1000)}; rescue StandardError=>e; Rails.logger.error("[AiAnalyzer] #{e.class}: #{e.message}"); {}; end
+  private; def chat_json(prompt,system); r=@client.chat(parameters:{model:MODEL,messages:[{role:"system",content:system},{role:"user",content:prompt}],temperature:0,response_format:{type:"json_object"}}); JSON.parse(r.dig("choices",0,"message","content").to_s); end
+end

@@ -1,0 +1,36 @@
+<div class="row justify-content-center mt-4">
+  <div class="col-md-5">
+    <div class="bg-white border rounded-4 p-5" style="border-radius:16px!important;border:1px solid #e2e8f0!important;">
+      <div class="d-flex align-items-center gap-2 mb-4">
+        <div style="background:#0f172a;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;">B</div>
+        <div>
+          <div class="fw-bold" style="font-family:'Merriweather',serif;">Bibliotk Corporate</div>
+          <div class="small text-muted" style="font-size:0.7rem;letter-spacing:1px;text-transform:uppercase;">Acceso Verificado</div>
+        </div>
+      </div>
+
+      <h5 class="fw-bold mb-1" style="letter-spacing:-0.3px;">Iniciar sesión</h5>
+      <p class="small text-muted mb-4">Use credenciales de prueba corporativa.</p>
+
+      <%= form_with url: "/login", local: true do |f| %>
+        <label class="small fw-medium text-muted mb-1">CORREO CORPORATIVO</label>
+        <input name="email" class="form-control mb-3" style="height:44px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;" value="admin@test.com" placeholder="admin@test.com">
+
+        <label class="small fw-medium text-muted mb-1">CONTRASEÑA</label>
+        <input name="password" type="password" class="form-control mb-4" style="height:44px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;" value="123456">
+
+        <button class="btn w-100" style="background:#0f172a;color:white;border-radius:8px;height:44px;font-weight:500;">Acceder al sistema</button>
+      <% end %>
+
+      <div class="mt-4 p-3 rounded-3" style="background:#f8fafc;border:1px solid #f1f5f9;">
+        <div class="small fw-semibold mb-1" style="color:#334155;">Credenciales de demostración</div>
+        <div class="small text-muted" style="font-size:0.8rem;line-height:1.5;">
+          Admin: admin@test.com / 123456<br>
+          Usuario: user-0-xxxx@test.com / 123456<br>
+          <span style="color:#b45309;">5000 usuarios generados por bonus O(1)</span>
+        </div>
+      </div>
+    </div>
+    <div class="text-center small text-muted mt-3">Arquitectura O(1) • valid_reviews_count materializado</div>
+  </div>
+</div>

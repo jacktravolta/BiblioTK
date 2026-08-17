@@ -1,0 +1,45 @@
+<div class="d-flex justify-content-between align-items-end mb-3">
+  <div>
+    <h4 class="fw-bold m-0">Catálogo — 50 libros por página (PDF)</h4>
+    <div class="small text-muted">Home O(1): SELECT id,title,author,valid_* LIMIT 50 OFFSET — sin AVG()</div>
+  </div>
+  <div class="small"><span class="badge bg-dark">Página <%= @page %> / <%= @total_pages %> • <%= @total_count %> libros</span></div>
+</div>
+
+<div class="row g-2 mb-3">
+  <div class="col-md-3"><div class="bg-white border rounded-3 p-2" style="border-left:4px solid #0f172a!important;"><div class="small text-muted" style="font-size:0.65rem;">HOME QUERY O(1)</div><b><%= (@home_timing*1000).round(2) %> ms</b> <span class="small text-muted">50 libros</span></div></div>
+  <div class="col-md-3"><div class="bg-white border rounded-3 p-2" style="border-left:4px solid #b45309!important;"><div class="small text-muted" style="font-size:0.65rem;">BENCHMARK 10x HOME</div><b><%= (@o1_benchmark*1000).round(2) %> ms total</b> <span class="small text-muted">(<%= (@o1_benchmark/10*1000).round(2) %> ms/req)</span></div></div>
+  <div class="col-md-6"><div class="bg-white border rounded-3 p-2" style="border-left:4px solid #166534!important;"><div class="small text-muted" style="font-size:0.65rem;">GENERACIÓN DATA MASIVA</div><b><%= @data_gen_timing || "Ejecuta benchmark_500k.rb" %></b></div></div>
+</div>
+
+<div class="row g-3">
+<% @books.each do |b| %>
+  <div class="col-6 col-md-2" style="width:20%;">
+    <div class="card h-100" style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+      <img src="https://picsum.photos/seed/book<%= b.id %>/300/380" style="width:100%;height:160px;object-fit:cover;">
+      <div class="card-body p-2">
+        <div class="small text-muted" style="font-size:0.6rem;"><%= b.author.truncate(18) %></div>
+        <a href="/books/<%= b.id %>?page=<%= @page %>" class="text-decoration-none text-dark fw-semibold" style="font-size:0.8rem;line-height:1.2;display:block;min-height:30px;"><%= b.title.truncate(35) %></a>
+        <div class="mt-1">
+          <% if b.average_rating %>
+            <span style="color:#b45309;font-size:0.75rem;"><% r=b.average_rating.round %><% (1..5).each do |i| %><% if i<=r %>★<% else %><span style="color:#e2e8f0;">★</span><% end %><% end %></span> <span class="small fw-bold" style="font-size:0.7rem;"><%= b.average_rating %></span>
+          <% else %>
+            <span class="badge" style="background:#f1f5f9;color:#64748b;font-size:0.55rem;"><%= b.valid_reviews_count %> rev</span>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>
+</div>
+
+<div class="mt-4 d-flex justify-content-between align-items-center p-3 bg-white border rounded-3">
+  <div class="small text-muted">Mostrando <%= @books.size %> de <%= @total_count %> • 50 por página (PDF) • Página <%= @page %> de <%= @total_pages %></div>
+  <div class="d-flex gap-1">
+    <% if @page > 1 %><a href="/books?page=<%= @page-1 %>" class="btn btn-sm btn-outline-dark">← Anterior</a><% end %>
+    <% (1..@total_pages).each do |p| %>
+      <% if p==@page %><span class="btn btn-sm btn-dark"><%= p %></span><% elsif (p<=3 || p>=@total_pages-2 || (p-@page).abs<=2) %><a href="/books?page=<%= p %>" class="btn btn-sm btn-outline-secondary"><%= p %></a><% elsif p==4 && @page>5 %><span class="btn btn-sm disabled">...</span><% end %>
+    <% end %>
+    <% if @page < @total_pages %><a href="/books?page=<%= @page+1 %>" class="btn btn-sm btn-outline-dark">Siguiente →</a><% end %>
+  </div>
+</div>
