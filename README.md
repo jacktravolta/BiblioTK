@@ -71,4 +71,16 @@ bin/rails server -b 0.0.0.0 -p 3000
 1. Código + instrucciones (este README)
 2. `DECISIONES.md` breve
 3. Bonus seed + medición
-# BiblioTK
+
+## Autor
+
+**Juan Espinoza Castro** — Product Builder / Fullstack Ruby on Rails
+
+- **Email:** juan.espinoza.castro88@gmail.com
+- **GitHub:** [jacktravolta](https://github.com/jacktravolta)
+- **Ubicación:** Santiago, Chile
+- **Repo:** https://github.com/jacktravolta/BiblioTK
+- **Demo:** http://52.67.100.34:3000/books
+- **Stack:** Rails 7 + PostgreSQL (atomización ACID, redundancia, soporte pgvector para búsqueda semántica futura) + Sidekiq + Tailwind
+
+> Este proyecto incluye 2 extras fuera de scope (IA Ban retroactivo + Front corporativo) bajo visión de producto: el módulo IA no es determinante para la ejecución, es una capa desacoplada de moderación. El front se desarrolló para pruebas E2E reales.
