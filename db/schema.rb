@@ -82,7 +82,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_08_16_010005) do
     t.datetime "updated_at", null: false
     t.index "lower((email)::text)", name: "index_users_on_lower_email", unique: true
     t.index ["banned"], name: "index_users_on_banned"
-    t.check_constraint "role::text = ANY (ARRAY['admin'::character varying, 'moderator'::character varying, 'user'::character varying]::text[])", name: "users_role_valid"
+    t.check_constraint "role::text = ANY (ARRAY['admin'::character varying::text, 'moderator'::character varying::text, 'user'::character varying::text])", name: "users_role_valid"
   end
 
   add_foreign_key "fraud_analyses", "books"
