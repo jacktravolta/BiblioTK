@@ -22,6 +22,61 @@ Plataforma de reseñas de libros resiliente a campañas falsas. Home lista **50 
 - Seed que genere un libro con 500.000 reseñas + medición que demuestre que home no se degrada
 - Detección anomalías reseñas falsas (propuesta en DECISIONES.md)
 
+## Configuración Base de Datos
+
+**Dónde se configura:**
+- `config/database.yml` - Rails usa `ENV['DATABASE_URL']` si existe, si no usa host `db` (servicio Docker)
+- `docker-compose.yml` - Define Postgres 15 + credenciales + volumen persistente
+- `.env` (opcional) - No requerido en Docker, usa defaults
+
+```yaml
+# docker-compose.yml (resumen)
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: bibliotk
+      POSTGRES_PASSWORD: bibliotk123
+      POSTGRES_DB: bibliotk_development
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  web:
+    environment:
+      DATABASE_URL: postgres://bibliotk:bibliotk123@db:5432/bibliotk_development
+      REDIS_URL: redis://redis:6379/0
+      RAILS_ENV: development
+      SEED_BIG: "false" # true = genera 5000 reviews en primer arranque
+```
+
+```yaml
+# config/database.yml
+development:
+  url: <%= ENV['DATABASE_URL'] || 'postgres://bibliotk:bibliotk123@localhost:5432/bibliotk_development' %>
+  pool: 10 # importante para test 200 threads
+
+test:
+  url: <%= ENV['DATABASE_URL'] || 'postgres://bibliotk:bibliotk123@localhost:5432/bibliotk_test' %>
+```
+
+**Cómo se inicializa:**
+- `entrypoint.sh` espera a postgres (`pg_isready -h db`) + `bin/rails db:prepare` (create + migrate si no existe) + corre `tmp/auto_seed.rb` idempotente
+- Si borras volumen: `docker compose down -v && docker compose up --build` → re-seed automático 50 libros + 7 users
+
+**Local sin Docker:**
+```bash
+# postgres local debe estar corriendo
+# config/database.yml usa localhost por defecto si no hay DATABASE_URL
+createdb bibliotk_development
+bin/rails db:migrate db:seed
+```
+
+**Índices clave (ver sección Índices DB abajo):**
+- `reviews(user_id, book_id) unique` → unicidad + concurrencia
+- `books(valid_reviews_count)` → Home O(1) sin sort en memoria
+
 ## Instalación con Docker (recomendado)
 ```bash
 git clone https://github.com/jacktravolta/BiblioTK.git
@@ -147,6 +202,7 @@ docker compose exec web bundle exec rspec -fd
 docker compose exec web bundle exec rspec spec/models/book_spec.rb -fd # redondeo bordes, umbral 3
 docker compose exec web bundle exec rspec spec/models/review_spec.rb -fd # ciclo editar/eliminar, baneo retroactivo
 docker compose exec web bundle exec rspec spec/models/review_concurrency_spec.rb -fd # unicidad 200 threads
+
 # Local
 bundle exec rspec -fd
 ```
