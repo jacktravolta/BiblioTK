@@ -25,6 +25,7 @@ class BooksController < ApplicationController
     @total_pages = 1 if @total_pages <= 0
     @page = @total_pages if @page > @total_pages
 
+    # ===== BANNER 1: Home query O(1) ms =====
     @home_ms = Benchmark.realtime do
       @books = scope.select(:id, :title, :author, :valid_reviews_count, :valid_total_stars, :created_at)
                     .limit(per_page)
@@ -33,13 +34,30 @@ class BooksController < ApplicationController
     end
     @home_ms = (@home_ms * 1000).round(2)
 
+    # ===== BANNER 2: Benchmark O(N) - Debe ser 10x más lento =====
+    # Cálculo REAL con COUNT/SUM
+    @benchmark_ms = Benchmark.realtime do
+      @books.each do |book|
+        # O(N) - lee la tabla reviews completa
+        book.reviews.joins(:user).where(users: {banned: false}).count
+        book.reviews.joins(:user).where(users: {banned: false}).sum(:stars)
+      end
+    end
+    @benchmark_ms = (@benchmark_ms * 1000).round(2)
+
+    # Tu banner antiguo de 10x Home (opcional)
     @home_10x_ms = Benchmark.realtime do
       10.times do
-        Book.limit(50).select(:id, :title, :author, :valid_reviews_count, :valid_total_stars, :created_at).order(valid_reviews_count: :desc).map(&:average_rating)
+        scope.select(:id, :title, :author, :valid_reviews_count, :valid_total_stars, :created_at)
+             .limit(per_page)
+             .offset((@page-1)*per_page)
+             .to_a
       end
     end
     @home_10x_ms = (@home_10x_ms * 1000).round(2)
-    @data_gen_timing = File.read("tmp/data_generation_timing.txt") rescue nil
+
+    # ===== BANNER 3: Generación Data =====
+    @data_gen_timing = File.read("tmp/data_generation_timing.txt") rescue "N/A - corre bin/rails db:seed"
   end
 
   def show
