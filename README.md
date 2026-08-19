@@ -90,7 +90,6 @@ bin/rails server -b 0.0.0.0 -p 3000
 ## Probar todos los puntos PDF
 ```bash
 # Docker
-docker compose exec web bin/rails runner /tmp/fix_final.rb
 docker compose exec web bin/rails runner benchmark_500k.rb
 docker compose exec web bundle exec rspec -fd
 
