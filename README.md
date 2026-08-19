@@ -119,7 +119,6 @@ bundle exec rspec -fd
 3 banners en `/books`:
 - Home query O(1) ms
 - Benchmark 10x Home ms
-- Generación Data (de `tmp/data_generation_timing.txt`)
 
 ## Entregables
 1. Código + instrucciones (este README)
