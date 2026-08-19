@@ -75,7 +75,7 @@ bin/rails server -b 0.0.0.0 -p 3000
 ## Autor
 
 **Juan Espinoza Castro** — Product Builder / Fullstack Ruby on Rails
-
+ 
 - **Email:** juan.espinoza.castro88@gmail.com
 - **GitHub:** [jacktravolta](https://github.com/jacktravolta)
 - **Ubicación:** Santiago, Chile
