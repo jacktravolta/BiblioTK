@@ -14,3 +14,5 @@ config/master.key
 config/credentials.yml.enc
 .env
 .DS_Store
+!tmp/auto_seed.rb
+!tmp/data_generation_timing.txt
