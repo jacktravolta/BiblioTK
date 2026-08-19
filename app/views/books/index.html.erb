@@ -1,61 +1,113 @@
-<div class="container py-3">
-<div class="row g-2 mb-3">
-  <div class="col-6 col-md-3"><div class="bg-white border rounded-3 p-2 h-100" style="border-left:4px solid #0f172a!important;"><div class="small text-muted" style="font-size:0.6rem;">HOME O(1)</div><b style="font-size:0.9rem;"><%= ((@home_timing || 0)*1000).round(2) %> ms</b></div></div>
-  <div class="col-6 col-md-3"><div class="bg-white border rounded-3 p-2 h-100" style="border-left:4px solid #b45309!important;"><div class="small text-muted" style="font-size:0.6rem;">BENCH 10x</div><b style="font-size:0.9rem;"><%= ((@o1_benchmark || 0)*1000).round(2) %> ms</b></div></div>
-  <div class="col-12 col-md-6"><div class="bg-white border rounded-3 p-2 h-100" style="border-left:4px solid #166534!important;"><div class="small text-muted" style="font-size:0.6rem;">DATA</div><b style="font-size:0.75rem; word-break:break-all;"><%= @data_gen_timing ? @data_gen_timing.truncate(80) : "benchmark_500k.rb" %></b></div></div>
-</div>
+<style>
+.pagination-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width: thin; }
+.pagination-scroll::-webkit-scrollbar { height:6px; }
+.pagination-scroll .pagination { flex-wrap: nowrap; margin-bottom:0; }
+.pagination-scroll .page-link { white-space: nowrap; font-size:0.85rem; min-width:38px; text-align:center; }
+.mini-stats-card { display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 6px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); flex-wrap: wrap; max-width: 100%; }
+.mini-pill { display: inline-flex; align-items: center; gap: 4px; border-radius: 20px; padding: 2px 8px; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
+.pill-green { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.pill-amber { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.pill-slate { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+.dot { width:6px; height:6px; border-radius:50%; display:inline-block; }
+.stars { color:#ffc107; letter-spacing: 3px; font-size:0.95rem; }
+.stars-empty { color:#ddd; }
+</style>
 
-  <div class="d-flex justify-content-between align-items-end mb-3">
-    <h4 class="fw-bold m-0" style="font-size:1.2rem;">Libros (<%= @total_count %>)</h4>
-    <small class="text-muted">Pág <%= @page %>/<%= @total_pages %></small>
+<div class="container py-3" id="home-top">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+    <h4 class="fw-bold mb-0">Libros (<%= @total_books %>)</h4>
+    <div class="mini-stats-card">
+      <span class="mini-pill pill-green"><span class="dot" style="background:#22c55e"></span> <%= @home_ms %> ms O(1)</span>
+      <span class="mini-pill pill-amber"><%= @home_10x_ms %> ms 10x</span>
+      <span class="mini-pill pill-slate">Pág <%= @page %>/<%= @total_pages %></span>
+    </div>
   </div>
+
+  <form method="get" action="<%= books_path %>" class="row g-2 mb-2">
+    <div class="col-12 col-md-6">
+      <input type="text" name="q" value="<%= @q %>" placeholder="Buscar por título o autor..." class="form-control form-control-sm">
+    </div>
+    <div class="col-6 col-md-2">
+      <select name="sort" class="form-select form-select-sm">
+        <option value="" <%= 'selected' if @sort.blank? %>>🔥 Más reseñas</option>
+        <option value="rating" <%= 'selected' if @sort == 'rating' %>>⭐ Mejor rating</option>
+        <option value="id" <%= 'selected' if @sort == 'id' %>>🆕 Más nuevos</option>
+      </select>
+    </div>
+    <div class="col-3 col-md-2">
+      <button class="btn btn-sm btn-primary w-100">Buscar</button>
+    </div>
+    <div class="col-3 col-md-2">
+      <a href="<%= books_path %>" class="btn btn-sm btn-outline-secondary w-100">Limpiar</a>
+    </div>
+  </form>
+
+  <% if @total_pages.to_i > 1 %>
+    <div class="pagination-scroll mb-3 bg-white border rounded-3 p-2 shadow-sm" id="paginator-top">
+      <ul class="pagination mb-0" id="pagination-list-top">
+        <li class="page-item <%= 'disabled' if @page.to_i <= 1 %>"><%= link_to "«", books_path(q: @q, sort: @sort, page: @page.to_i-1, anchor: "home-top"), class: "page-link" %></li>
+        <% window = 10; start_p = [@page.to_i - window, 1].max; end_p = [start_p + 19, @total_pages.to_i].min; start_p = [end_p - 19, 1].max %>
+        <% (start_p..end_p).each do |p| %>
+          <li class="page-item <%= 'active' if p == @page.to_i %>"><%= link_to p, books_path(q: @q, sort: @sort, page: p, anchor: "home-top"), class: "page-link" %></li>
+        <% end %>
+        <li class="page-item <%= 'disabled' if @page.to_i >= @total_pages.to_i %>"><%= link_to "»", books_path(q: @q, sort: @sort, page: @page.to_i+1, anchor: "home-top"), class: "page-link" %></li>
+      </ul>
+    </div>
+  <% end %>
 
   <div class="row g-3">
     <% @books.each do |book| %>
-      <% avg = book.average_rating || 0 %>
-      <% full = avg.floor %>
-      <% half = (avg - full) >= 0.5 ? 1 : 0 %>
-      <% empty = 5 - full - half %>
-      <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
-        <div class="card h-100 border-0 shadow-sm" style="border-radius:16px; overflow:hidden;">
-          <a href="<%= book_path(book) %>">
-            <img src="https://picsum.photos/seed/book-<%= book.id %>/600/400" class="card-img-top" style="height:220px; object-fit:cover;" loading="lazy" onerror="this.src='https://picsum.photos/600/400?random=<%= book.id %>'">
-          </a>
-          <div class="card-body p-3">
-            <h6 class="card-title mb-1" style="font-size:0.95rem;"><%= link_to book.title.truncate(40), book_path(book), class: "text-decoration-none text-dark fw-bold" %></h6>
-            <small class="text-muted"><%= book.author.truncate(25) %></small>
-            
-            <div class="mt-2">
-              <% if book.valid_reviews_count < 3 %>
-                <span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d; font-size:0.65rem;">Reseñas Insuficientes</span>
-                <div class="small text-muted mt-1" style="font-size:0.7rem;"><%= book.valid_reviews_count %> reseña(s)</div>
-              <% else %>
-                <!-- ESTRELLAS MODO ICONO -->
-                <div class="d-flex align-items-center gap-1">
-                  <span style="color:#f59e0b; font-size:1rem; letter-spacing:1px;">
-                    <%= "★" * full %><% if half == 1 %><%= "⯨" %><% end %><span style="color:#e5e7eb;"><%= "★" * empty %></span>
-                  </span>
-                  <b style="font-size:0.85rem;"><%= avg %></b>
-                </div>
-                <div class="small text-muted" style="font-size:0.7rem;"><%= book.valid_reviews_count %> reseñas • <%= book.valid_total_stars %> pts</div>
-              <% end %>
+      <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+        <a href="<%= book_path(book) %>" class="text-decoration-none">
+          <div class="card h-100 shadow-sm rounded-4">
+            <img src="https://picsum.photos/seed/book-<%= book.id %>/400/600" class="card-img-top rounded-top-4" style="object-fit:cover; height:250px;">
+            <div class="card-body p-2">
+              <h6 class="card-title mb-1 text-truncate text-dark"><%= book.title %></h6>
+              <small class="text-muted d-block text-truncate"><%= book.author %></small>
+              <div class="mt-1">
+                <% if book.valid_reviews_count.to_i >= 3 %>
+                  <div class="d-flex align-items-center gap-1">
+                    <span class="stars"><%= "★" * book.average_rating.to_i %><span class="stars-empty"><%= "★" * (5 - book.average_rating.to_i) %></span></span>
+                    <small class="text-dark fw-bold"><%= book.average_rating %></small>
+                  </div>
+                <% else %>
+                  <span class="badge bg-secondary" style="font-size:0.7rem;">Reseñas Insuficientes</span>
+                <% end %>
+                <small class="text-muted" style="font-size:0.7rem;">(<%= book.valid_reviews_count %> reseñas)</small>
+              </div>
             </div>
           </div>
-        </div>
+        </a>
       </div>
     <% end %>
   </div>
 
-  <% if @total_pages > 1 %>
-    <nav class="mt-4"><ul class="pagination justify-content-center flex-wrap">
-      <% (1..@total_pages).each do |p| %>
-        <li class="page-item <%= 'active' if p == @page %>"><%= link_to p, books_path(page: p), class: "page-link" %></li>
-      <% end %>
-    </ul></nav>
+  <% if @total_pages.to_i > 1 %>
+    <div class="pagination-scroll mt-4 bg-white border rounded-3 p-2 shadow-sm" id="paginator-bottom">
+      <ul class="pagination mb-0" id="pagination-list-bottom">
+        <li class="page-item <%= 'disabled' if @page.to_i <= 1 %>"><%= link_to "« Anterior", books_path(q: @q, sort: @sort, page: @page.to_i-1, anchor: "paginator-bottom"), class: "page-link" %></li>
+        <% window = 10; start_p = [@page.to_i - window, 1].max; end_p = [start_p + 19, @total_pages.to_i].min; start_p = [end_p - 19, 1].max %>
+        <% (start_p..end_p).each do |p| %>
+          <li class="page-item <%= 'active' if p == @page.to_i %>"><%= link_to p, books_path(q: @q, sort: @sort, page: p, anchor: "paginator-bottom"), class: "page-link" %></li>
+        <% end %>
+        <li class="page-item <%= 'disabled' if @page.to_i >= @total_pages.to_i %>"><%= link_to "Siguiente »", books_path(q: @q, sort: @sort, page: @page.to_i+1, anchor: "paginator-bottom"), class: "page-link" %></li>
+      </ul>
+    </div>
   <% end %>
 </div>
-<style>
-@media (max-width: 576px) {
-  .card-img-top { height: 280px !important; }
-}
-</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+  function centerActive(containerId, listId){
+    const container = document.getElementById(containerId);
+    const active = document.querySelector("#"+listId+" .page-item.active");
+    if(container && active){
+      const cRect = container.getBoundingClientRect();
+      const aRect = active.getBoundingClientRect();
+      container.scrollLeft += (aRect.left - cRect.left) - (cRect.width/2) + (aRect.width/2);
+    }
+  }
+  centerActive("paginator-top","pagination-list-top");
+  centerActive("paginator-bottom","pagination-list-bottom");
+});
+</script>

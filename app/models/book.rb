@@ -6,6 +6,10 @@ class Book < ApplicationRecord
   def increment_valid_ratings!(stars); stars=Integer(stars); raise ArgumentError unless stars.between?(1,5); self.class.where(id:id).update_all(["valid_reviews_count = valid_reviews_count + 1, valid_total_stars = valid_total_stars + ?", stars]); end
   def decrement_valid_ratings!(stars); stars=Integer(stars); raise ArgumentError unless stars.between?(1,5); self.class.where(id:id).update_all(["valid_reviews_count = GREATEST(valid_reviews_count - 1, 0), valid_total_stars = GREATEST(valid_total_stars - ?, 0)", stars]); end
   def sync_valid_ratings!(old,new); old=Integer(old); new=Integer(new); raise ArgumentError unless old.between?(1,5) && new.between?(1,5); return if old==new; self.class.where(id:id).update_all(["valid_total_stars = GREATEST(valid_total_stars - ? + ?, 0)", old, new]); end
-  def reconcile_valid_ratings!; self.class.where(id:id).update_all("valid_reviews_count = (SELECT COUNT(*) FROM reviews INNER JOIN users ON users.id = reviews.user_id WHERE reviews.book_id = books.id AND users.banned = FALSE), valid_total_stars = (SELECT COALESCE(SUM(reviews.stars),0) FROM reviews INNER JOIN users ON users.id = reviews.user_id WHERE reviews.book_id = books.id AND users.banned = FALSE)"); reload; end
+  def reconcile_valid_ratings!
+  valid = reviews.joins(:user).where(users: {banned: false})
+  update_columns(valid_reviews_count: valid.count, valid_total_stars: valid.sum(:stars))
+end
+
   def user_review(user); return unless user; reviews.find_by(user_id:user.id); end
 end

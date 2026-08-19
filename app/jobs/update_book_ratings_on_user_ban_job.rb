@@ -1,1 +1,9 @@
-class UpdateBookRatingsOnUserBanJob < ApplicationJob; queue_as :default; def perform(uid); u=User.find_by(id:uid); return unless u; u.reviews.distinct.pluck(:book_id).each{|bid| ReconcileBookRatingJob.perform_later(bid); DetectBookFraudJob.set(wait:30.seconds).perform_later(bid) if AiAnalyzer.active?}; end; end
+class UpdateBookRatingsOnUserBanJob < ApplicationJob
+  queue_as :default
+  def perform(user_id)
+    user = User.find_by(id: user_id)
+    return unless user
+    book_ids = Review.where(user_id: user.id).distinct.pluck(:book_id)
+    Book.where(id: book_ids).find_each(&:reconcile_valid_ratings!)
+  end
+end

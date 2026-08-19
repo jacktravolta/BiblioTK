@@ -1,61 +1,109 @@
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-end mb-4">
-    <div>
-      <h4 class="fw-bold m-0">Gestión de Usuarios</h4>
-      <div class="small text-muted">Paginado • <%= @total_count %> usuarios totales • Página <%= @page %> de <%= @total_pages %></div>
-    </div>
-    <span class="badge" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;"><%= @total_count %> total</span>
-  </div>
+<style>
+.pagination-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width: thin; position:relative; }
+.pagination-scroll::-webkit-scrollbar { height:6px; }
+.pagination-scroll .pagination { flex-wrap: nowrap; margin-bottom:0; }
+.pagination-scroll .page-link { white-space: nowrap; font-size:0.85rem; min-width:38px; text-align:center; }
+.users-table-wrap { overflow-x:auto; }
+.users-table { min-width: 750px; }
+.col-nombre { min-width: 140px; max-width: 180px; word-break: break-word; }
+.col-email { min-width: 220px; word-break: break-all; font-size:0.85rem; }
+</style>
 
-  <div class="card border-0 shadow-sm" style="border-radius:16px;">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle m-0">
-        <thead style="background:#f8fafc;">
-          <tr>
-            <th>ID</th><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acciones</th>
+<div class="container py-3">
+  <a href="/books" class="btn btn-sm btn-outline-secondary mb-3">← Volver a libros</a>
+  <h4 class="fw-bold">Administrar Usuarios (<%= @total_users %>) - 20 por página</h4>
+
+  <form method="get" action="<%= users_path %>" class="row g-2 mb-2">
+    <div class="col-12 col-md-6">
+      <input type="text" name="q" value="<%= @q %>" placeholder="Buscar por nombre, email o rol..." class="form-control form-control-sm">
+    </div>
+    <div class="col-6 col-md-3">
+      <select name="filter" class="form-select form-select-sm">
+        <option value="">Todos</option>
+        <option value="active" <%= 'selected' if params[:filter] == 'active' %>>Activos</option>
+        <option value="banned" <%= 'selected' if params[:filter] == 'banned' %>>Baneados</option>
+      </select>
+    </div>
+    <div class="col-6 col-md-3 d-flex gap-1">
+      <button class="btn btn-sm btn-primary w-100">🔍 Buscar</button>
+      <a href="<%= users_path %>" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+    </div>
+  </form>
+
+  <%# PAGINADOR ARRIBA -> ancla top %>
+  <% if @total_pages > 1 %>
+    <div class="pagination-scroll mb-2 bg-white border rounded-3 p-2 shadow-sm" id="paginator-top">
+      <ul class="pagination mb-0" id="pagination-list-top">
+        <li class="page-item <%= 'disabled' if @page <= 1 %>"><%= link_to "«", users_path(q: @q, filter: params[:filter], page: @page-1, anchor: "paginator-top"), class: "page-link" %></li>
+        <% window = 25; start_p = [@page - window, 1].max; end_p = [start_p + 49, @total_pages].min; start_p = [end_p - 49, 1].max %>
+        <% (start_p..end_p).each do |p| %>
+          <li class="page-item <%= 'active' if p == @page %>" data-page="<%= p %>"><%= link_to p, users_path(q: @q, filter: params[:filter], page: p, anchor: "paginator-top"), class: "page-link" %></li>
+        <% end %>
+        <li class="page-item <%= 'disabled' if @page >= @total_pages %>"><%= link_to "»", users_path(q: @q, filter: params[:filter], page: @page+1, anchor: "paginator-top"), class: "page-link" %></li>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="bg-white border rounded-4 shadow-sm users-table-wrap" id="users-table">
+    <table class="table table-sm table-hover mb-0 align-middle users-table">
+      <thead class="table-light">
+        <tr><th>ID</th><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acción</th></tr>
+      </thead>
+      <tbody>
+        <% @users.each do |u| %>
+          <tr class="<%= 'table-danger' if u.banned? %>">
+            <td><%= u.id %></td>
+            <td class="col-nombre"><%= u.name %></td>
+            <td class="col-email"><%= u.email %></td>
+            <td><span class="badge bg-<%= u.admin? ? 'dark' : 'secondary' %>"><%= u.role %></span></td>
+            <td><% if u.banned? %><span class="badge bg-danger">BANEADO</span><% else %><span class="badge bg-success">Activo</span><% end %></td>
+            <td>
+              <% if u.id != current_user.id %>
+                <% if u.banned? %>
+                  <%= button_to "✅ Desbanear", unban_user_path(u, anchor: "users-table"), method: :post, class: "btn btn-sm btn-success", style: "font-size:0.7rem;" %>
+                <% else %>
+                  <%= button_to "🚫 Banear", ban_user_path(u, anchor: "users-table"), method: :post, class: "btn btn-sm btn-outline-danger", style: "font-size:0.7rem;" %>
+                <% end %>
+              <% else %><small class="text-muted">Tú</small><% end %>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          <% @users.each do |u| %>
-            <tr>
-              <td><%= u.id %></td>
-              <td><%= u.name %></td>
-              <td><%= u.email %></td>
-              <td><span class="badge bg-light text-dark border"><%= u.role %></span></td>
-              <td>
-                <% if u.banned? %>
-                  <span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">BANEADO</span>
-                <% else %>
-                  <span class="badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;">ACTIVO</span>
-                <% end %>
-              </td>
-              <td class="d-flex gap-2">
-                <%= link_to "Ver", user_path(u), class: "btn btn-sm btn-outline-secondary" %>
-                <% if u.banned? %>
-                  <%= button_to "Reactivar", unban_user_path(u), method: :post, class: "btn btn-sm btn-outline-success" %>
-                <% else %>
-                  <% if current_user.id != u.id %>
-                    <%= button_to "Suspender", ban_user_path(u), method: :post, class: "btn btn-sm btn-outline-danger", form: { data: { turbo_confirm: "¿Banear a #{u.email}? Recalculará ratings O(1)" } } %>
-                  <% end %>
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+        <% end %>
+      </tbody>
+    </table>
   </div>
 
-  <div class="mt-4 d-flex justify-content-center">
-    <%= render partial: "shared/paginator", locals: { current_page: @page, total_pages: @total_pages, total_count: @total_count, per_page: @per_page, param_name: :page } rescue nil %>
-    <% if @total_pages > 1 %>
-      <nav>
-        <ul class="pagination">
-          <% (1..@total_pages).each do |p| %>
-            <li class="page-item <%= 'active' if p == @page %>"><%= link_to p, users_path(page: p), class: "page-link" %></li>
-          <% end %>
-        </ul>
-      </nav>
-    <% end %>
-  </div>
+  <%# PAGINADOR ABAJO -> ancla bottom, se queda abajo %>
+  <% if @total_pages > 1 %>
+    <div class="pagination-scroll mt-3 bg-white border rounded-3 p-2 shadow-sm" id="paginator-bottom">
+      <ul class="pagination mb-0" id="pagination-list-bottom">
+        <li class="page-item <%= 'disabled' if @page <= 1 %>"><%= link_to "« Anterior", users_path(q: @q, filter: params[:filter], page: @page-1, anchor: "paginator-bottom"), class: "page-link" %></li>
+        <% window = 25; start_p = [@page - window, 1].max; end_p = [start_p + 49, @total_pages].min; start_p = [end_p - 49, 1].max %>
+        <% (start_p..end_p).each do |p| %>
+          <li class="page-item <%= 'active' if p == @page %>" data-page="<%= p %>"><%= link_to p, users_path(q: @q, filter: params[:filter], page: p, anchor: "paginator-bottom"), class: "page-link" %></li>
+        <% end %>
+        <li class="page-item <%= 'disabled' if @page >= @total_pages %>"><%= link_to "Siguiente »", users_path(q: @q, filter: params[:filter], page: @page+1, anchor: "paginator-bottom"), class: "page-link" %></li>
+      </ul>
+    </div>
+    <div class="text-center small text-muted mt-2">Página <%= @page %> de <%= @total_pages %> • Desliza → en el paginador</div>
+  <% end %>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+  function centerActive(containerId, listId){
+    const container = document.getElementById(containerId);
+    const active = document.querySelector("#"+listId+" .page-item.active");
+    if(container && active){
+      const cRect = container.getBoundingClientRect();
+      const aRect = active.getBoundingClientRect();
+      container.scrollLeft += (aRect.left - cRect.left) - (cRect.width/2) + (aRect.width/2);
+    }
+  }
+  centerActive("paginator-top","pagination-list-top");
+  centerActive("paginator-bottom","pagination-list-bottom");
+  // Si viene con #paginator-bottom, asegúrate de que quede visible
+  if(window.location.hash === "#paginator-bottom"){
+    setTimeout(()=>{ document.getElementById("paginator-bottom")?.scrollIntoView({block:"center"}); }, 100);
+  }
+});
+</script>

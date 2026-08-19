@@ -1,49 +1,51 @@
 class UsersController < ApplicationController
-  before_action :require_admin, only: [:index, :ban, :unban]
-  before_action :set_user, only: [:show, :ban, :unban]
+  before_action :require_admin
 
   def index
-    @per_page = 20
-    @page = [params[:page].to_i, 1].max
-    @total_count = User.count
-    @total_pages = (@total_count.to_f / @per_page).ceil
-    @users = User.order(:id).limit(@per_page).offset((@page - 1) * @per_page)
-  end
+    per_page = 20
+    @page = [(params[:page] || 1).to_i, 1].max
+    @q = params[:q].to_s.strip
 
-  def show
-    @reviews_page = [params[:reviews_page].to_i, 1].max
-    @reviews_per_page = 10
-    @reviews_total = @user.reviews.count
-    @reviews_total_pages = (@reviews_total.to_f / @reviews_per_page).ceil
-    @reviews = @user.reviews.includes(:book).order(created_at: :desc).limit(@reviews_per_page).offset((@reviews_page - 1) * @reviews_per_page)
+    scope = User.order(:id)
+    
+    if @q.present?
+      # ILIKE para postgres, busca por nombre, email, role
+      like = "%#{@q}%"
+      scope = scope.where("name ILIKE ? OR email ILIKE ? OR role ILIKE ?", like, like, like)
+    end
+
+    # filtro extra opcional por estado
+    if params[:filter] == "banned"
+      scope = scope.where(banned: true)
+    elsif params[:filter] == "active"
+      scope = scope.where(banned: false)
+    end
+
+    @total_users = scope.count
+    @total_pages = (@total_users.to_f / per_page).ceil
+    @total_pages = 1 if @total_pages == 0
+    @page = @total_pages if @page > @total_pages
+
+    @users = scope.limit(per_page).offset((@page - 1) * per_page)
   end
 
   def ban
-    if @user.id == current_user.id
-      redirect_back fallback_location: users_path, alert: "No puedes banearte a ti mismo"
-      return
-    end
-    @user.ban_by!(current_user, reason: params[:reason] || "Baneado desde admin - #{request.referer}")
-    redirect_back fallback_location: users_path, notice: "Usuario #{@user.email} baneado - ratings recalculados O(1)"
-  rescue => e
-    redirect_back fallback_location: users_path, alert: "Error: #{e.message}"
+    @user = User.find(params[:id])
+    @user.ban_by!(current_user, reason: params[:reason])
+    redirect_back fallback_location: users_path, notice: "Usuario #{@user.email} baneado. Ratings recalculados O(1)"
   end
 
   def unban
+    @user = User.find(params[:id])
     @user.unban_by!(current_user)
-    redirect_back fallback_location: users_path, notice: "Usuario #{@user.email} reactivado"
-  rescue => e
-    redirect_back fallback_location: users_path, alert: "Error: #{e.message}"
+    redirect_back fallback_location: users_path, notice: "Usuario #{@user.email} desbaneado. Ratings recalculados O(1)"
   end
 
   private
-  def set_user
-    @user = User.find(params[:id])
-  end
 
   def require_admin
     unless current_user&.admin?
-      redirect_to books_path, alert: "Solo admin puede gestionar usuarios"
+      redirect_to books_path, alert: "Solo admin"
     end
   end
 end

@@ -1,16 +1,18 @@
 require 'benchmark'
-puts "=== BONUS 500k O(1) - 50 LIBROS POR PAGINA PDF ==="
+require 'fileutils'
 
 total_time = Benchmark.realtime do
-  Book.where(title: "Libro Popular").destroy_all
+  # 1. 50 libros base si no existen
   if Book.count < 50
-    puts "Creando 50 libros base (PDF)..."
     books = 50.times.map { |i| { title: "Libro Base #{i}", author: "Autor Base #{i}", valid_reviews_count: 0, valid_total_stars: 0, created_at: Time.now, updated_at: Time.now } }
     Book.insert_all(books)
   end
-  book = Book.create!(title: "Libro Popular", author: "Autor Test")
+  
+  book = Book.find_or_create_by!(title: "Libro Popular", author: "Autor Test")
+  
   SEED_COUNT = 5000
   BATCH_SIZE = 5000
+  
   needed = SEED_COUNT - User.count
   if needed > 0
     puts "Creando #{needed} usuarios..."
@@ -21,12 +23,15 @@ total_time = Benchmark.realtime do
       User.insert_all(batch)
     end
   end
-  user_ids = User.order(:id).limit(SEED_COUNT).pluck(:id)
-  user_ids.each_slice(BATCH_SIZE) do |slice|
-    reviews = slice.map { |uid| { user_id: uid, book_id: book.id, stars: rand(1..5), content: "Reseña benchmark #{SecureRandom.hex(2)}", created_at: Time.now, updated_at: Time.now } }
-    Review.insert_all(reviews)
+  
+  if Review.count < SEED_COUNT
+    user_ids = User.order(:id).limit(SEED_COUNT).pluck(:id)
+    user_ids.each_slice(BATCH_SIZE) do |slice|
+      reviews = slice.map { |uid| { user_id: uid, book_id: book.id, stars: rand(1..5), content: "Reseña benchmark #{SecureRandom.hex(2)}", created_at: Time.now, updated_at: Time.now } }
+      Review.insert_all(reviews)
+    end
+    book.reconcile_valid_ratings!
   end
-  book.reconcile_valid_ratings!
 end
 
 FileUtils.mkdir_p("tmp")
