@@ -223,13 +223,22 @@ puts "Total reviews user/book: #{Review.where(book: book, user: user).count} deb
 ```
 
 **5. Probar editar/eliminar:**
-```ruby
+```bash
+bin/rails runner '
 review = Review.first
-review.update!(stars: 1, content: "Cambié opinión")
-review.book.reload.average_rating # debe recalcular
-
+puts "Review ID #{review.id}: Usuario=#{review.user.name} (#{review.user.email}) en Libro=#{review.book.title} por #{review.book.author}"
+review.update!(stars: 1, content: "Cambie opinion")
+puts "Actualizada a stars=#{review.stars}"
+rating = review.book.reload.average_rating
+puts "Nuevo average_rating de #{review.book.title}: #{rating} debe recalcular"
+book = review.book
 review.destroy!
-review.book.reload.valid_reviews_count # debe decrementar
+puts "Review destruida"
+count = book.reload.valid_reviews_count
+total = book.valid_total_stars
+puts "Libro #{book.title} ahora: valid_reviews_count=#{count}, valid_total_stars=#{total} debe decrementar"
+puts "average_rating final: #{book.average_rating}"
+'
 ```
 
 **6. Tests completos RSpec (lo que pide PDF):**
