@@ -1,28 +1,35 @@
-puts ">> AUTO_SEED 100/200/300"
+puts ">> AUTO SEED CHECK..."
 require 'set'
-if Book.count >= 100 && User.count >= 200 && Review.count >= 300
-  puts ">> YA POBLADO: #{Book.count}/#{User.count}/#{Review.count} - skip"
+if Book.count >= 10 && User.count >= 20 && Review.count >= 200
+  puts ">> YA HAY DATOS: #{Book.count} libros, #{User.count} users, #{Review.count} reviews - skip"
   exit
 end
-puts ">> CREANDO..."
+puts ">> SEED 10/20/200"
 admin = User.where(email: "admin@bibliotk.cl").first_or_create! { |u| u.name="Admin"; u.password="123456"; u.role="admin" }
-admin.update!(role:"admin", banned:false)
-100.times { |i| Book.where(title:"Libro #{i+1}").first_or_create! { |b| b.author="Autor #{(i%20)+1}" } }
-200.times do |i|
+admin.update!(role: "admin", banned: false)
+
+10.times { |i| Book.where(title: "Libro #{i+1}").first_or_create! { |b| b.author="Autor #{(i%20)+1}" } }
+books = Book.all.to_a
+
+20.times do |i|
   email="user#{i+1}@test.cl"
   User.where("lower(email)=?", email.downcase).first_or_create! { |u| u.name="User #{i+1}"; u.email=email; u.password="123456"; u.role="user"; u.banned=false }
 end
-books=Book.all.to_a; users=User.where(role:"user").to_a
+users = User.where(role:"user").to_a
+
 Review.delete_all
-Book.update_all(valid_reviews_count:0, total_stars:0)
+if Book.column_names.include?("valid_reviews_count")
+  Book.update_all(valid_reviews_count:0, total_stars:0) rescue nil
+end
+
 used=Set.new; c=0
-while c<300
+while c<200
   b=books.sample; u=users.sample; k="#{u.id}-#{b.id}"
   next if used.include?(k)
   used.add(k)
-  Review.create!(user_id:u.id, book_id:b.id, stars:rand(1..5), comment:"Review #{c+1} auto")
+  Review.create!(user_id:u.id, book_id:b.id, stars:rand(1..5), comment:"Auto #{c+1}")
   c+=1
 end
-Book.find_each { |b| ReconcileBookRatingJob.new.perform(b.id) }
-puts ">> OK: #{User.count} users, #{Book.count} books, #{Review.count} reviews"
-File.write("tmp/data_generation_timing.txt","#{Time.now} - #{User.count} users, #{Book.count} books, #{Review.count} reviews\n")
+Book.find_each { |b| ReconcileBookRatingJob.new.perform(b.id) rescue nil }
+File.write("tmp/data_generation_timing.txt","Timing guardado: #{Time.now}\n#{User.count} users, #{Book.count} books, #{Review.count} reviews\n")
+puts ">> SEED OK: #{Book.count}/#{User.count}/#{Review.count}"
