@@ -17,9 +17,12 @@
       <div class="mt-3 p-3 bg-white border rounded-4 shadow-sm">
         <h5 class="fw-bold mb-1"><%= @book.title %></h5>
         <div class="text-muted mb-2"><%= @book.author %></div>
-        <div>
+        <div id="book_<%= @book.id %>_stats">
           <span class="badge bg-primary"><%= @book.average_rating_label %></span>
-          <small class="text-muted">(<%= @book.valid_reviews_count %> reseñas)</small>
+          <small class="text-muted">(<span id="book_<%= @book.id %>_count"><%= @book.valid_reviews_count %></span> reseñas)</small>
+        </div>
+        <div>
+
         </div>
       </div>
 

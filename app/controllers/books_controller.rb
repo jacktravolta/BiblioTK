@@ -12,21 +12,11 @@ class BooksController < ApplicationController
       scope = scope.where("LOWER(title) LIKE ? OR LOWER(author) LIKE ?", pattern, pattern)
     end
 
-<<<<<<< HEAD
     if @sort == "rating"
       scope = scope.order(Arel.sql("CASE WHEN valid_reviews_count >= 3 THEN (valid_total_stars::float / valid_reviews_count) ELSE 0 END DESC, valid_reviews_count DESC, id ASC"))
     elsif @sort == "id"
       scope = scope.order(id: :desc)
     else
-=======
-    # Orden por mayor reseña - mantiene O(1) porque usa contadores materializados
-    # No toca tabla reviews, solo books.valid_reviews_count
-    if @sort == "rating"
-      # Por mayor rating promedio
-      scope = scope.order(Arel.sql("CASE WHEN valid_reviews_count >= 3 THEN (valid_total_stars::float / valid_reviews_count) ELSE 0 END DESC, valid_reviews_count DESC, id ASC"))
-    else
-      # DEFAULT: por mayor cantidad de reseñas (mayor reseña)
->>>>>>> 57469fc (Correccion comando ruby de pruebas)
       scope = scope.order(valid_reviews_count: :desc, valid_total_stars: :desc, id: :asc)
     end
 
@@ -35,21 +25,15 @@ class BooksController < ApplicationController
     @total_pages = 1 if @total_pages <= 0
     @page = @total_pages if @page > @total_pages
 
-<<<<<<< HEAD
     # ===== BANNER 1: Home query O(1) ms =====
     @home_ms = Benchmark.realtime do
       @books = scope.select(:id, :title, :author, :valid_reviews_count, :valid_total_stars, :created_at)
-=======
-    @home_ms = Benchmark.realtime do
-      @books = scope.select(:id, :title, :author, :valid_reviews_count, :valid_total_stars)
->>>>>>> 57469fc (Correccion comando ruby de pruebas)
                     .limit(per_page)
                     .offset((@page-1)*per_page)
                     .to_a
     end
     @home_ms = (@home_ms * 1000).round(2)
 
-<<<<<<< HEAD
     # ===== BANNER 2: Benchmark O(N) - Debe ser 10x más lento =====
     # Cálculo REAL con COUNT/SUM
     @benchmark_ms = Benchmark.realtime do
@@ -74,15 +58,6 @@ class BooksController < ApplicationController
 
     # ===== BANNER 3: Generación Data =====
     @data_gen_timing = File.read("tmp/data_generation_timing.txt") rescue "N/A - corre bin/rails db:seed"
-=======
-    @home_10x_ms = Benchmark.realtime do
-      10.times do
-        Book.limit(50).select(:id, :title, :author, :valid_reviews_count, :valid_total_stars).order(valid_reviews_count: :desc).map(&:average_rating)
-      end
-    end
-    @home_10x_ms = (@home_10x_ms * 1000).round(2)
-    @data_gen_timing = File.read("tmp/data_generation_timing.txt") rescue nil
->>>>>>> 57469fc (Correccion comando ruby de pruebas)
   end
 
   def show

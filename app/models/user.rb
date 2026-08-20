@@ -1,58 +1,27 @@
 class User < ApplicationRecord
   has_secure_password
   has_many :reviews, dependent: :destroy
-<<<<<<< HEAD
-  has_many :ban_logs, class_name: "UserBanLog", foreign_key: :user_id, inverse_of: :user, dependent: :destroy
-  has_many :user_ban_logs, class_name: "UserBanLog", foreign_key: :user_id, inverse_of: :user, dependent: :destroy
-  has_many :ban_actions, class_name: "UserBanLog", foreign_key: :actor_id, inverse_of: :actor, dependent: :nullify
-
-  def admin?; role.to_s == "admin"; end
-  def banned?; !!banned; end
-  def can_review?; !banned?; end
-
-  def ban_by!(admin_user, reason: nil)
-    raise ArgumentError, "Solo ADMIN puede banear" unless admin_user&.admin?
-    raise ArgumentError, "No puedes banearte a ti mismo" if admin_user.id == id
-    transaction do
-      update!(banned: true)
-      UserBanLog.create!(user: self, actor: admin_user, action: 'banned', reason: reason)
-    end
-    UpdateBookRatingsOnUserBanJob.perform_later(id)
-  end
-
-  def unban_by!(admin_user)
-    raise ArgumentError, "Solo ADMIN puede banear" unless admin_user&.admin?
-    transaction do
-      update!(banned: false)
-      UserBanLog.create!(user: self, actor: admin_user, action: 'unbanned')
-    end
-    UpdateBookRatingsOnUserBanJob.perform_later(id)
-=======
 
   def admin?
-    role.to_s == "admin"
+    role == "admin"
   end
 
-  def user?
-    role.to_s != "admin"
+  def ban_by!(admin, reason: nil)
+    transaction do
+      update!(banned: true)
+      reviews.includes(:book).each do |review|
+        review.book.decrement_valid_ratings!(review.stars)
+      end
+      FraudAnalysis.create!(user_id: id, admin_id: admin.id, action: "ban", reason: reason) rescue nil
+    end
   end
 
-  def banned?
-    !!banned
-  end
-
-  def can_review?
-    !banned?
-  end
-
-  def ban_by!(admin_user, reason: nil)
-    update!(banned: true)
-    UpdateBookRatingsOnUserBanJob.perform_now(self.id)
-  end
-
-  def unban_by!(admin_user)
-    update!(banned: false)
-    UpdateBookRatingsOnUserBanJob.perform_now(self.id)
->>>>>>> 57469fc (Correccion comando ruby de pruebas)
+  def unban_by!(admin)
+    transaction do
+      update!(banned: false)
+      reviews.includes(:book).each do |review|
+        review.book.increment_valid_ratings!(review.stars)
+      end
+    end
   end
 end
