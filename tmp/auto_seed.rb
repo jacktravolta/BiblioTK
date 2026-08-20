@@ -5,22 +5,27 @@ if Book.count >= 10 && User.count >= 20 && Review.count >= 200
   exit
 end
 puts ">> SEED 10/20/200"
+
+# ADMIN EXACTO que pides
 admin = User.where(email: "admin@bibliotk.cl").first_or_create! { |u| u.name="Admin"; u.password="123456"; u.role="admin" }
-admin.update!(role: "admin", banned: false)
+admin.update!(role: "admin", banned: false, password: "123456", password_confirmation: "123456")
+
+# USER1 EXACTO que pides: user1@test.com / 12345678
+u1 = User.where(email: "user1@test.com").first_or_create! { |u| u.name="User 1"; u.password="12345678"; u.role="user" }
+u1.update!(role: "user", banned: false, password: "12345678", password_confirmation: "12345678")
 
 10.times { |i| Book.where(title: "Libro #{i+1}").first_or_create! { |b| b.author="Autor #{(i%20)+1}" } }
 books = Book.all.to_a
 
-20.times do |i|
-  email="user#{i+1}@test.cl"
-  User.where("lower(email)=?", email.downcase).first_or_create! { |u| u.name="User #{i+1}"; u.email=email; u.password="123456"; u.role="user"; u.banned=false }
+# resto de users 2..20 en .com para que coincida con tu login
+19.times do |i|
+  email="user#{i+2}@test.com"
+  User.where("lower(email)=?", email.downcase).first_or_create! { |u| u.name="User #{i+2}"; u.email=email; u.password="12345678"; u.role="user"; u.banned=false }
 end
 users = User.where(role:"user").to_a
 
 Review.delete_all
-if Book.column_names.include?("valid_reviews_count")
-  Book.update_all(valid_reviews_count:0, total_stars:0) rescue nil
-end
+Book.update_all(valid_reviews_count:0, total_stars:0) rescue nil
 
 used=Set.new; c=0
 while c<200
@@ -31,5 +36,4 @@ while c<200
   c+=1
 end
 Book.find_each { |b| ReconcileBookRatingJob.new.perform(b.id) rescue nil }
-File.write("tmp/data_generation_timing.txt","Timing guardado: #{Time.now}\n#{User.count} users, #{Book.count} books, #{Review.count} reviews\n")
-puts ">> SEED OK: #{Book.count}/#{User.count}/#{Review.count}"
+puts ">> SEED OK - Login user: user1@test.com / 12345678 - Login admin: admin@bibliotk.cl / 123456"
