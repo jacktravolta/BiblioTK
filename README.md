@@ -115,23 +115,35 @@ docker compose exec web bin/rails console
 ```
 ```ruby
 # Console
-book = Book.create!(title: "Test", author: "Test")
-user = User.first
+book = Book.create!(title: "Test123", author: "Test")
 
 # Crear 3 reviews válidas
-3.times { |i| Review.create!(book: book, user: User.create!(email: "t#{i}@t.cl", password: "12345678"), stars: 5) }
+3.times do |i|
+  user = User.create!(
+    name: "Test #{i}",
+    email: "t#{i}_#{Time.now.to_i}#{i}@t.cl",
+    password: "12345678"
+  )
+  Review.create!(book: book, user: user, stars: 5)
+end
+
 book.reload.average_rating # => 5.0
 
 # Medir Home O(1)
 require 'benchmark'
-time = Benchmark.realtime { Book.order(valid_reviews_count: :desc).limit(50).select(:id, :title, :author, :valid_reviews_count, :valid_total_stars).to_a } * 1000
+time = Benchmark.realtime { 
+  Book.order(valid_reviews_count: :desc).limit(50).select(:id, :title, :author, :valid_reviews_count, :valid_total_stars).to_a 
+} * 1000
 puts "Home O(1): #{time.round(2)}ms"
 
 # Con 500k reviews sigue igual
 load 'benchmark_500k.rb' # genera libro con 500k
-time2 = Benchmark.realtime { Book.order(valid_reviews_count: :desc).limit(50).select(:id, :title, :author, :valid_reviews_count, :valid_total_stars).to_a } * 1000
+time2 = Benchmark.realtime { 
+  Book.order(valid_reviews_count: :desc).limit(50).select(:id, :title, :author, :valid_reviews_count, :valid_total_stars).to_a 
+} * 1000
 puts "Con 500k: #{time2.round(2)}ms - debe ser similar a #{time.round(2)}ms"
 ```
+
 
 **2. Probar baneo retroactivo:**
 ```ruby
