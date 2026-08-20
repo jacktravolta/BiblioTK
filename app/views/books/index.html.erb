@@ -17,11 +17,17 @@
   <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
     <h4 class="fw-bold mb-0">Libros (<%= @total_books %>)</h4>
     <div class="mini-stats-card">
+<<<<<<< HEAD
 
       <span class="mini-pill pill-green"><span class="dot" style="background:#22c55e"></span> <%= @home_ms %> ms O(1)</span>
       <span class="mini-pill pill-amber"><%= @home_10x_ms %> ms 10x Home</span>
       <span class="mini-pill pill-slate">Pág <%= @page %>/<%= @total_pages %></span>
 
+=======
+      <span class="mini-pill pill-green"><span class="dot" style="background:#22c55e"></span> <%= @home_ms %> ms O(1)</span>
+      <span class="mini-pill pill-amber"><%= @home_10x_ms %> ms 10x</span>
+      <span class="mini-pill pill-slate">Pág <%= @page %>/<%= @total_pages %></span>
+>>>>>>> 57469fc (Correccion comando ruby de pruebas)
     </div>
   </div>
 
@@ -68,6 +74,7 @@
               <small class="text-muted d-block text-truncate"><%= book.author %></small>
               <div class="mt-1">
                 <% if book.valid_reviews_count.to_i >= 3 %>
+<<<<<<< HEAD
                   <div class="d-flex align-items-center gap-1 flex-wrap">
                     <span class="stars"><%= "★" * book.average_rating.to_i %><span class="stars-empty"><%= "★" * (5 - book.average_rating.to_i) %></span></span>
                     <small class="text-dark fw-bold"><%= book.average_rating %></small>
@@ -81,6 +88,16 @@
                     <small class="text-muted" style="font-size:0.68rem;">• <%= book.created_at.strftime("%d/%m/%Y") if book.created_at %></small>
                   </div>
                 <% end %>
+=======
+                  <div class="d-flex align-items-center gap-1">
+                    <span class="stars"><%= "★" * book.average_rating.to_i %><span class="stars-empty"><%= "★" * (5 - book.average_rating.to_i) %></span></span>
+                    <small class="text-dark fw-bold"><%= book.average_rating %></small>
+                  </div>
+                <% else %>
+                  <span class="badge bg-secondary" style="font-size:0.7rem;">Reseñas Insuficientes</span>
+                <% end %>
+                <small class="text-muted" style="font-size:0.7rem;">(<%= book.valid_reviews_count %> reseñas)</small>
+>>>>>>> 57469fc (Correccion comando ruby de pruebas)
               </div>
             </div>
           </div>

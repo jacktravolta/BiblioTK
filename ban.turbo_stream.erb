@@ -1,0 +1,5 @@
+<% @banned_books.each do |book| %>
+  <%= turbo_stream.replace "book_#{book.id}_stats" do %>
+    <div id="book_<%= book.id %>_stats"><%= book.reload.valid_reviews_count %> reseñas - <%= book.average_rating.round(1) rescue book.average_rating %> ⭐</div>
+  <% end %>
+<% end %>
