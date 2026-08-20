@@ -1,30 +1,23 @@
 class Review < ApplicationRecord
-  belongs_to :user
   belongs_to :book
+  belongs_to :user
 
   validates :stars, presence: true, inclusion: { in: 1..5 }
   validates :content, length: { maximum: 1000 }, allow_blank: true
-<<<<<<< HEAD
-  validates :user_id, uniqueness: { scope: :book_id, message: "ya reseñaste este libro" }
+  validates :user_id, uniqueness: { scope: :book_id, message: "ya valoró este libro" }
+
   validate :reviewer_can_review
 
-  after_create_commit :add_to_rating
-  after_update_commit :sync_rating_if_needed
-  after_destroy_commit :remove_from_rating
-=======
-  validates :user_id, uniqueness: { scope: :book_id, message: "ya reseñó este libro" }
-  validate :reviewer_can_review
-
-  after_create :increment_book_counter
-  after_update :recalculate_book_counter
-  after_destroy :recalculate_book_counter
->>>>>>> 57469fc (Correccion comando ruby de pruebas)
+  after_create :add_to_rating
+  after_update :update_rating_if_needed
+  after_destroy :remove_from_rating
 
   private
 
   def reviewer_can_review
-<<<<<<< HEAD
-    errors.add(:user, "baneado no puede reseñar") if user && !user.can_review?
+    if user&.banned?
+      errors.add(:base, "Usuario baneado no puede valorar")
+    end
   end
 
   def add_to_rating
@@ -32,28 +25,15 @@ class Review < ApplicationRecord
     book.increment_valid_ratings!(stars)
   end
 
-  def sync_rating_if_needed
+  def update_rating_if_needed
+    return if user&.banned?
     return unless saved_change_to_stars?
     old_stars, new_stars = saved_change_to_stars
-    return if user&.banned?
     book.sync_valid_ratings!(old_stars, new_stars)
   end
 
   def remove_from_rating
     return if user&.banned?
     book.decrement_valid_ratings!(stars)
-=======
-    if user && !user.can_review?
-      errors.add(:user, "baneado no puede reseñar")
-    end
-  end
-
-  def increment_book_counter
-    book.reconcile_valid_ratings!
-  end
-
-  def recalculate_book_counter
-    book.reconcile_valid_ratings!
->>>>>>> 57469fc (Correccion comando ruby de pruebas)
   end
 end
