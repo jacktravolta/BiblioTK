@@ -197,15 +197,29 @@ book2.reload.average_rating # => 3.3  (3+3+3+4)/4 = 3.25 -> 3.3
 **4. Probar unicidad y concurrencia (200 threads):**
 ```bash
 # RSpec cubre esto
-bundle exec rspec spec/models/review_concurrency_spec.rb -fd
-# o manual:
-bin/rails runner "
-book = Book.first
-user = User.first
-threads = 20.times.map { Thread.new { begin; Review.create!(book: book, user: user, stars: 5); rescue => e; puts e.message; end } }
+bundle exec rspec spec/integration/review_concurrency_spec.rb -fd
+
+# o manual (correr desde bash, no desde rails c):
+bin/rails runner '
+book = Book.create!(title: "Concurrency Test", author: "Test")
+user = User.create!(name: "Concurrency", email: "concurrent_#{Time.now.to_i}@test.cl", password: "12345678")
+Review.where(book: book, user: user).delete_all
+
+threads = 20.times.map do
+  Thread.new do
+    ActiveRecord::Base.connection_pool.with_connection do
+      begin
+        Review.create!(book: book, user: user, stars: 5)
+      rescue => e
+        puts "#{e.class}: #{e.message.truncate(80)}"
+      end
+    end
+  end
+end
+
 threads.each(&:join)
-puts \"Total reviews user/book: #{Review.where(book: book, user: user).count} debe ser 1\"
-"
+puts "Total reviews user/book: #{Review.where(book: book, user: user).count} debe ser 1"
+'
 ```
 
 **5. Probar editar/eliminar:**
