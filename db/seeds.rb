@@ -25,6 +25,9 @@ end
 
 admin = User.where(email:"admin@bibliotk.cl").first_or_create! { |u| u.name="Admin"; u.password="123456"; u.role="admin" }
 admin.update!(role:"admin", banned:false, password:"123456", password_confirmation:"123456")
+admin = User.where(email:"admin@test.com").first_or_create! { |u| u.name="Admin"; u.password="123456"; u.role="admin" }
+admin.update!(role:"admin", banned:false, password:"123456", password_confirmation:"123456")
+
 
 7.times do |i|
   email="user#{i+1}@test.com"
