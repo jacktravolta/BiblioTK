@@ -168,19 +168,30 @@ book.reload.valid_reviews_count # => 1
 
 **3. Probar umbral 3 reseñas y redondeo half-up:**
 ```ruby
+# Borde < 3 reviews => "Reseñas Insuficientes"
 book = Book.create!(title: "Borde", author: "Test")
-# <3 reviews
-2.times { |i| Review.create!(book: book, user: User.create!(email: "b#{i}@b.cl", password: "12345678"), stars: 5) }
-book.average_rating # => "Reseñas Insuficientes"
 
-# 3ra review
-Review.create!(book: book, user: User.create!(email: "b3@b.cl", password: "12345678"), stars: 4)
-book.reload.average_rating # => 4.7 ( (5+5+4)/3 = 4.666 -> 4.7 half-up)
+2.times do |i|
+  u = User.create!(name: "Borde #{i}", email: "b#{i}_#{Time.now.to_i}#{i}@b.cl", password: "12345678")
+  Review.create!(book: book, user: u, stars: 5)
+end
+
+book.reload.average_rating # => "Reseñas Insuficientes"  <- DEBE dar esto
+
+# 3ra review -> ya entra
+u3 = User.create!(name: "Borde 3", email: "b3_#{Time.now.to_i}@b.cl", password: "12345678")
+Review.create!(book: book, user: u3, stars: 4)
+
+book.reload.average_rating # => 4.7  (5+5+4)/3 = 4.666... -> 4.7 half-up
 
 # Borde 3.25 -> 3.3
 book2 = Book.create!(title: "Borde2", author: "Test")
-[3,3,3,4].each_with_index { |s,i| Review.create!(book: book2, user: User.create!(email: "c#{i}@c.cl", password: "12345678"), stars: s) }
-book2.average_rating # 3.25 -> 3.3
+[3,3,3,4].each_with_index do |s,i|
+  u = User.create!(name: "C #{i}", email: "c#{i}_#{Time.now.to_i}#{i}@c.cl", password: "12345678")
+  Review.create!(book: book2, user: u, stars: s)
+end
+
+book2.reload.average_rating # => 3.3  (3+3+3+4)/4 = 3.25 -> 3.3
 ```
 
 **4. Probar unicidad y concurrencia (200 threads):**
