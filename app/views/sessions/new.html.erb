@@ -14,22 +14,15 @@
 
       <%= form_with url: "/login", local: true do |f| %>
         <label class="small fw-medium text-muted mb-1">CORREO CORPORATIVO</label>
-        <input name="email" class="form-control mb-3" style="height:44px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;" value="admin@test.com" placeholder="admin@test.com">
+        <input name="email" class="form-control mb-3" style="height:44px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;" value="" placeholder="">
 
         <label class="small fw-medium text-muted mb-1">CONTRASEÑA</label>
-        <input name="password" type="password" class="form-control mb-4" style="height:44px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;" value="123456">
+        <input name="password" type="password" class="form-control mb-4" style="height:44px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;" value="">
 
         <button class="btn w-100" style="background:#0f172a;color:white;border-radius:8px;height:44px;font-weight:500;">Acceder al sistema</button>
       <% end %>
 
-      <div class="mt-4 p-3 rounded-3" style="background:#f8fafc;border:1px solid #f1f5f9;">
-        <div class="small fw-semibold mb-1" style="color:#334155;">Credenciales de demostración</div>
-        <div class="small text-muted" style="font-size:0.8rem;line-height:1.5;">
-          Admin: admin@test.com / 123456<br>
-          Usuario: user-0-xxxx@test.com / 123456<br>
-          <span style="color:#b45309;">5000 usuarios generados por bonus O(1)</span>
-        </div>
-      </div>
+
     </div>
     <div class="text-center small text-muted mt-3">Arquitectura O(1) • valid_reviews_count materializado</div>
   </div>
