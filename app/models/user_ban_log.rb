@@ -1,4 +1,4 @@
 class UserBanLog < ApplicationRecord
-  belongs_to :user, inverse_of: :ban_logs
-  belongs_to :actor, class_name: "User", inverse_of: :ban_actions
+  belongs_to :user
+  belongs_to :banned_by, class_name: 'User', optional: true
 end

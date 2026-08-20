@@ -4,7 +4,7 @@ class Review < ApplicationRecord
 
   validates :stars, presence: true, inclusion: { in: 1..5 }
   validates :content, length: { maximum: 1000 }, allow_blank: true
-  validates :user_id, uniqueness: { scope: :book_id, message: "ya valoró este libro" }
+  validates :user_id, uniqueness: { scope: :book_id, message: "ya reseñaste este libro" }
 
   validate :reviewer_can_review
 
@@ -15,9 +15,7 @@ class Review < ApplicationRecord
   private
 
   def reviewer_can_review
-    if user&.banned?
-      errors.add(:base, "Usuario baneado no puede valorar")
-    end
+    errors.add(:base, "Usuario baneado no puede valorar") if user&.banned?
   end
 
   def add_to_rating
